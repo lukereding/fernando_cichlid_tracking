@@ -22,7 +22,7 @@ important: the long side of the tank must be perpendicular to the camera view
 
 help menu:  python fernando_tracker.py --help
 arguments:
---pathToVideo or -i : full or relative path to video file.
+--pathToVideo or -i : full or relative path to video file or input number.
 --videoName or -n: used to save files associated with the trial. required
 --fps or -f: frames per second
 
@@ -154,7 +154,8 @@ def convertToHSV(frame):
 	# apply mask to get rid of stuff outside the tank
 	mask = np.zeros((camHeight, camWidth, 3),np.uint8)
 	# use rectangle bounds for masking
-	mask[lower_bound:top_bound,left_bound:right_bound] = hsv[lower_bound:top_bound,left_bound:right_bound]
+	mask[top_bound:lower_bound,left_bound:right_bound] = hsv[top_bound:lower_bound,left_bound:right_bound]
+	cv2.imwrite("mask.jpg",mask)
 	return mask
 
 
@@ -177,7 +178,7 @@ def returnLargeContour(frame,totalVideoPixels):
 		# I originally found that including blobs within the range (150, 2000) worked well for videos that were 1280x780
 		# thus the fish took up ~0.016776% to ~0.21701% of the total available pixels (921,600)
 		# based on that, I should be able to apply those percents to any video resolution and get good results
-		if area > (totalVideoPixels*0.00016776) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
+		if area > (totalVideoPixels*0.00016) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
 			potential_centroids.append(z)
 			print "area: " + str(area) + "; aspect_ratio: " + str(aspect_ratio)
 
@@ -270,7 +271,7 @@ def find_tank_bounds(image,name_of_trial):
 
 		#box = np.int0(box)
 		#cv2.drawContours(image_copy,[box],0,(0,255,255),10)
-		cv2.rectangle(image_copy,(left_bound, top_bound),(right_bound,lower_bound),(0,255,0),10)
+		cv2.rectangle(image_copy,(left_bound, top_bound),(right_bound,lower_bound),(0,255,255),10)
 		cv2.imwrite(str(name_of_trial) + "_tank_bounds.jpg", image_copy)
 
 
@@ -287,6 +288,11 @@ def find_tank_bounds(image,name_of_trial):
 path = args["pathToVideo"]
 
 # set up the video capture to the video that was the argument to the script, get feed dimensions
+# if it's not a file but a webcam feed, change the path variable to an int
+try:
+	path = int(path)
+except:
+	pass
 cap = cv2.VideoCapture(path)
 global camWidth, camHeight # for masking
 camWidth, camHeight = cap.get(3), cap.get(4)
@@ -433,7 +439,11 @@ print "counter: " + str(counter)
 print "\nthis program took " + str(time.time() - start_time) + " seconds to run."
 
 # calculate and print association time to the screen
-printUsefulStuff(zone,fps)
+try:
+	printUsefulStuff(zone,fps)
+# just to make sure it works:
+except:
+	printUsefulStuff(zone,fps)
 
 print "\n\nCongrats. Lots of files saved.\n\n\tYour video file is saved at " + str(path) + "\n\tYour csv file with tracking coordinates is saved at " + os.getcwd() + "/" + name + ".csv"
 print "\tYour list of tentative association zones occupied in each frame is saved at " + os.getcwd() + "/" + name + ".txt"
