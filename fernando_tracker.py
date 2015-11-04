@@ -3,24 +3,27 @@ import cv2, csv, os, re, sys, time, argparse, datetime
 
 
 '''
-started 25 August 2015
+this script started long ago as differenceImageGravel.py. It's since gone through various incarnations.
 
-31 August 2015:
-modifying script so that it queries frames from a video taken with ffmpeg
-
-assumes there are four 'parts' to your video of each length. this only affects some of the stats the program prints at the end
+The goal now (4 Nov 2015) is to modify the script to meet fernado's needs for his cichlid study
 
 important: the long side of the tank must be perpendicular to the camera view
 
-assumes there are four 'parts' to your video of each length. this only affects some of the stats the program prints at the end
-important: the long side of the tank must be perpendicular to the camera view
+
+#### some challenges #######
+## to do this in real time, we can't use a background image that we've generated using cv2.accumulateWeighted
+## what we CAN do is to use the first frame as our background image and as the program continues to get new frames,
+## we can add these to cv2.accumulateWeighted until we get to some frame number, where this image then becomes the background image
+## we can refresh the background image by incorporting new images into cv2.accumulatedWeighted as the program progresses
 
 
-help menu:  python realTimeTracker.py --help
+help menu:  python fernando_tracker.py --help
 arguments:
---pathToVideo: full or relative path to video file
---videoName: used to save files associated with the trial. required
-example of useage: python realTimeTracker.py -i /Users/lukereding/Desktop/Bertha_Scototaxis.mp4 -n Bertha -f 10
+--pathToVideo or -i : full or relative path to video file.
+--videoName or -n: used to save files associated with the trial. required
+--fps or -f: frames per second
+
+example of useage: python fernando_tracker.py -i /Volumes/NEXT/Video\ 5.mp4 -n video5
 
 '''
 print time.strftime('%X %x %Z')
@@ -30,28 +33,24 @@ print time.strftime('%X %x %Z')
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--pathToVideo", help = "integer that represents either the relative or full path to the video you want to analyze",nargs='?',default=0)
 ap.add_argument("-n", "--videoName", help = "name of the video to be saved",required=True)
-ap.add_argument("-f", "--fps", help = "frames per second of the video",required=True)
-ap.add_argument("-b", "--bias", help = "proportion of time a fish spends on either the right or lefthand side of the tank to be declared side bias. defaults to 0.75",nargs='?',default=0.75)
+ap.add_argument("-f", "--fps", help = "frames per second of the video")
 
 args = ap.parse_args()
 
 # print arguments to the screen
 print("\n\n\tinput path: {}".format(args.pathToVideo))
 print("\tname of trial: {}".format(args.videoName))
-print("\tfps of video: {}".format(args.fps))
-print("\tbias: {}".format(args.bias))
+if args.fps is not None:
+	print("\tfps of video: {}".format(args.fps))
 
 args = vars(ap.parse_args())
 
 fps = args["fps"]
 
-bias = args["bias"]
-if bias > 1 or bias < 0:
-	sys.exit("bias (-b) must be between 0 and 1")
-
 # calculate the time that the program should start the main loop
 start_time = time.time()
 
+# initialize some constants
 lower = np.array([0,0,0])
 upper = np.array([255,255,20])
 counter = 0
@@ -69,94 +68,70 @@ ix,iy = -1,-1
 
 # print python version
 print "python version:\n"
-print sys.version 
+print sys.version
 
 ######################
 # declare some functions:####
 #####################################
 
-def checkSideBias(left,right,neutral,bias):
-	
-	total = left + right + neutral
-	if left >= bias*total:
-		return("left side bias")
-	elif right >= bias*total:
-		return("right side bias")
-	else:
-		return("looks good")
-
-def printUsefulStuff(listOfSides,fps,biasProp):
+def printUsefulStuff(listOfSides,fps):
 	fps = int(fps)
 	# print realized fps for the trial
 	print "\ntotal frames: " + str(len(listOfSides))
-	
+
 	# now subset the list of sides into four parts. each will be a quarter of the total length of the list
 	# there is probably a better way to do this, but I don't know what it is
 	leftPart1 = listOfSides[0:int(len(listOfSides)*0.2381)].count("left")
 	rightPart1 = listOfSides[0:int(len(listOfSides)*0.2381)].count("right")
 	neutralPart1 = listOfSides[0:int(len(listOfSides)*0.2381)].count("neutral")
-	
+
 	# stimuli here
 	leftPart2 = listOfSides[int(len(listOfSides)*0.2381):int(len(listOfSides)*0.4762)].count("left")
 	rightPart2 = listOfSides[int(len(listOfSides)*0.2381):int(len(listOfSides)*0.4762)].count("right")
 	neutralPart2 = listOfSides[int(len(listOfSides)*0.2381):int(len(listOfSides)*0.4762)].count("neutral")
-	
+
 	# stimuli here
 	leftPart3 = listOfSides[int(len(listOfSides)*0.5238):int(len(listOfSides)*0.7619)].count("left")
 	rightPart3 = listOfSides[int(len(listOfSides)*0.5238):int(len(listOfSides)*0.7619)].count("right")
 	neutralPart3 = listOfSides[int(len(listOfSides)*0.5238):int(len(listOfSides)*0.7619)].count("neutral")
-	
+
 	leftPart4 = listOfSides[int(len(listOfSides)*0.7619):len(listOfSides)].count("left")
 	rightPart4 = listOfSides[int(len(listOfSides)*0.7619):len(listOfSides)].count("right")
 	neutralPart4 = listOfSides[int(len(listOfSides)*0.7619):len(listOfSides)].count("neutral")
-	
+
 	# print association time stats to the screen for each part
 	print "------------------------------\n\n\n\n\n\n\nassociation time statistics for each part of the trial:"
 	print "\n\npart 1:\nframes 0 - " + str(int(len(listOfSides)*0.2381))
 	print "seconds left: " + str(leftPart1/fps)
 	print "seconds right: " + str(rightPart1/fps)
 	print "seconds neutral: " + str(neutralPart1/fps) + "\n"
-	print checkSideBias(leftPart1,rightPart1,neutralPart1,biasProp)
-	
+
 	# print association time stats to the screen for each part
 	print "\n\npart 2:\nframes " + str(int(len(listOfSides)*0.2381)) + " - " + str(int(len(listOfSides)*0.4762))
 	print "seconds left: " + str(leftPart2/fps)
 	print "seconds right: " + str(rightPart2/fps)
 	print "seconds neutral: " + str(neutralPart2/fps) + "\n"
-	print checkSideBias(leftPart2,rightPart2,neutralPart2,biasProp)
-	
+
 	# print association time stats to the screen for each part
 	print "\n\npart 3:\nframes " + str(int(len(listOfSides)*0.5238)) + " - " + str(int(len(listOfSides)*0.7619))
 	print "seconds left: " + str(leftPart3/fps)
 	print "seconds right: " + str(rightPart3/fps)
 	print "seconds neutral: " + str(neutralPart3/fps) + "\n"
-	print checkSideBias(leftPart3,rightPart3,neutralPart3,biasProp)
-	
+
 	# print association time stats to the screen for each part
 	print "\n\npart 4:\n" + str(int(len(listOfSides)*0.7619)) + " - " + str(int(len(listOfSides)))
 	print "seconds left: " + str(leftPart4/fps)
 	print "seconds right: " + str(rightPart4/fps)
 	print "seconds neutral: " + str(neutralPart4/fps) + "\n"
-	print checkSideBias(leftPart4,rightPart4,neutralPart4,biasProp)
-	
-	## check for side bias in the two parts where stimuli were present:
-	print "\n\nchecking side bias for parts 2 and 3, where male stimuli were present:\n\n"
-	print "left: " + str((leftPart2+leftPart3)/fps) + " seconds\nright: " + str((rightPart2+rightPart3)/fps) + "seconds\nneutral: " + str((neutralPart2+neutralPart3)/fps) + " seconds"
-	bias = checkSideBias(leftPart2+leftPart3,rightPart3+rightPart2,neutralPart3+neutralPart2,biasProp)
-	print bias
-	
+
 	# check for time spend in the neutral zone
 	print "\nchecking for to see whether the fish spend > 50% of the trial in the neutral part of the tank:\n"
 
 	time_neutral = int((neutralPart2+neutralPart3)/fps)
-	
+
 	print "time in neutral zone during parts 2 and 3: " + str(time_neutral)
 	if time_neutral > 300:
 		print "female spent more than half the time in the neutral zone. RETEST FEMALE."
-	
-	if bias != "looks good":
-		print "\tFEMALE MUST BE RE-TESTED. SET ASIDE FEMALE AND RE-TEST AT A LATER DATE"
-	
 
 # set up video writer to save the video
 def setupVideoWriter(width, height,videoName):
@@ -176,30 +151,29 @@ def convertToHSV(frame):
 	# apply mask to get rid of stuff outside the tank
 	mask = np.zeros((camHeight, camWidth, 3),np.uint8)
 	# use rectangle bounds for masking
-
 	mask[lower_bound:top_bound,left_bound:right_bound] = hsv[lower_bound:top_bound,left_bound:right_bound]
 	return mask
 
-	
+
 # returns centroid from largest contour from a binary image
 def returnLargeContour(frame,totalVideoPixels):
 	potential_centroids = []
-	
+
 	# find all contours in the frame
 	contours = cv2.findContours(frame,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[0]
 	print "number of contours: " + str(len(contours)) + "\n"
-	
+
 	for z in contours:
 		# calculate some things
 		area = cv2.contourArea(z)
 		x,y,w,h = cv2.boundingRect(z)
 		aspect_ratio = float(w)/h
-		
+
 		##### the main filtering statement:
 		# the problem with use absolute values for the size cutoffs is that this will vary with the dimensions of the camera
 		# I originally found that including blobs within the range (150, 2000) worked well for videos that were 1280x780
 		# thus the fish took up ~0.016776% to ~0.21701% of the total available pixels (921,600)
-		# based on that, I should be able to apply those percents to any video resolution and get good results 
+		# based on that, I should be able to apply those percents to any video resolution and get good results
 		if area > (totalVideoPixels*0.00016776) and area < (totalVideoPixels*0.0021701) and aspect_ratio <= 3.5 and aspect_ratio >= 0.3:
 			potential_centroids.append(z)
 			print "area: " + str(area) + "; aspect_ratio: " + str(aspect_ratio)
@@ -211,80 +185,54 @@ def returnLargeContour(frame,totalVideoPixels):
 		csv_writer.writerow(("NA","NA",counter))
 		return(None)
 	else:
-		for j in largestCon:	
-			m = cv2.moments(j)		
+		for j in largestCon:
+			m = cv2.moments(j)
 			centroid_x = int(m['m10']/m['m00'])
 			centroid_y = int(m['m01']/m['m00'])
 			csv_writer.writerow((centroid_x,centroid_y,counter))
 			return((centroid_x,centroid_y))
 
-# might be nice to try to get an image of the background without the fish
-# computes an 'average' photo of the first numFrames frames from the video
-# change lines 176 and 175 below to try it out
-def getBackgroundImage(vid,numFrames):
-	
-	print "\n\n\n\n-----------------------\n\ninitializing background detection\n"
-	
-	# set a counter
-	i = 0
-	_,frame = vid.read()
-	# initialize an empty array the same size of the pic to update
-	update = np.float32(frame)
-	
-	# loop through the first numFrames frames to get the background image
-	while i < numFrames:
-		# grab a frame
-		_,frame = vid.read()
-		
-		# main function
-		cv2.accumulateWeighted(frame,update,0.001)
-		final = cv2.convertScaleAbs(update)
-		# increment the counter
-		i += 1
-		
-		# print something every 100 frames so the user knows the gears are grinding
-		if i%100 == 0:
-			print "detecting background -- on frame " + str(i) + " of " + str(numFrames)
-	return final
+
 
 def find_tank_bounds(image,name_of_trial):
-	
+
 	# blur the image a lot
 	blur = cv2.blur(image, (11,11))
 	# convert to hsv
 	hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
 	# get only the whitish parts
 	mask = cv2.inRange(hsv,np.array([10,0,80]),np.array([80,108,240]))
-	
+
 	# find all contours in the frame
 	contours = cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[0]
 	# find largest contour
 	largestCon = sorted(contours, key = cv2.contourArea, reverse = True)[:1]
-	for j in largestCon:	
-		m = cv2.moments(j)		
+	for j in largestCon:
+		m = cv2.moments(j)
 		centroid_x = int(m['m10']/m['m00'])
 		centroid_y = int(m['m01']/m['m00'])
 		x,y,w,h = cv2.boundingRect(j)
 		print "x,y,w,h:"
 		print x,y,w,h
+
 		# declare the tank bounds globally
 		global top_bound, left_bound, right_bound, lower_bound
 		top_bound, left_bound, right_bound, lower_bound = int(y) + int(h) + 50, int(x) - 50, int(x) + 50 + int(w), int(y) - 50
 		print "rectange bounds: "
 		print top_bound, left_bound, right_bound, lower_bound
-		
+
 		# save a photo of the tank bounds for reference:
 		# first make a copy of the image
 		image_copy = image.copy()
 		cv2.rectangle(image_copy,(left_bound, top_bound),(right_bound,lower_bound),(0,255,0),10)
 		#cv2.rectangle(image_copy,(int(x*0.8),int(y*0.8)),(int(x*0.8)+int(w*1.2),int(y*0.8)+int(h*1.2)),(0,255,0),10)
 		cv2.imwrite(str(name_of_trial) + "_tank_bounds.jpg", image_copy)
-		
+
 		# save tank bound coordinates to a file for parsing later if need be
 		coord_file = open(str(name_of_trial) + "_tank_bounds.txt", "w")
 		coord_file.write("top bound: " + str(top_bound) + "\n" + "left bound: " + str(left_bound) + "\n" + "right bound: " + str(right_bound) + "\n" + "lower bound: " + str(lower_bound) + "\n")
 		coord_file.close()
-		
+
 
 #########################
 ## end function declarations ####
@@ -351,18 +299,17 @@ cap = cv2.VideoCapture(path)
 ### the main loop######
 ###################
 while(cap.isOpened()):
-	
+
 	print "frame " + str(counter) + "\n\n"
-	
+
 	# for timing, maintaining constant fps
 	beginningOfLoop = time.time()
-	
-	ret,frame = cap.read()
-	
+
+	# maybe do a try statement here?
 	if ret == False:
 		print "didn't read frame from video file"
 		break
-	
+
 	# do image manipulations for tracking
 	hsv = convertToHSV(frame)
 	difference = cv2.subtract(hsv_initial,hsv)
@@ -371,16 +318,16 @@ while(cap.isOpened()):
 
 	# find the centroid of the largest blob
 	center = returnLargeContour(maskedInvert, camWidth*camHeight)
-		
+
 	# if the fish wasn't ID'ed by the tracker, assume it's stopped moving
 	if not center:
-		coordinates.append(coordinates[-1]) 
+		coordinates.append(coordinates[-1])
 	# otherwise add the coordinate to the growing list
 	else:
 		coordinates.append(center)
-	
+
 	print "coordinates: " + str(coordinates[-1])
-	
+
 	# find what association zone the fish is in:
 	if coordinates[-1][0] < leftBound:
 		zone.append("left")
@@ -389,29 +336,27 @@ while(cap.isOpened()):
 	else:
 		zone.append("neutral")
 
-	
-	print "Center: " + str(center) + "\n"
-	
-	# draw the centroids on the image
-	cv2.circle(frame,coordinates[-1],4,[0,0,255],-1)
-	
 
-	cv2.putText(frame,str(name),(int(camWidth/5),50), cv2.FONT_HERSHEY_PLAIN, 3.0,(255,255,255))
+	print "Center: " + str(center) + "\n"
+
+	# draw the centroids on the image and place text
+	cv2.circle(frame,coordinates[-1],4,[0,0,255],-1)
+	cv2.putText(frame,str(name),(int(camWidth/5),50), cv2.FONT_HERSHEY_PLAIN, 3.0,(0,0,0))
 	cv2.putText(frame,str(zone[-1]),(leftBound,top_bound+50), cv2.FONT_HERSHEY_PLAIN, 3.0,(255,255,255))
-	cv2.putText(frame,str("frame " + str(counter)), (leftBound,top_bound+100),cv2.FONT_HERSHEY_PLAIN, 3.0,(255,255,255))
-	
+	cv2.putText(frame,str("frame " + str(counter)), (leftBound,top_bound+100),cv2.FONT_HERSHEY_PLAIN, 3.0,(0,0,0))
+
 	#resize image for the laptop
 	frame = cv2.resize(frame,(0,0),fx=0.5,fy=0.5)
 	cv2.imshow('image',frame)
-	#masked = cv2.resize(masked,(0,0),fx=0.5,fy=0.5)
-	#cv2.imshow('thresh',masked)
-	#difference = cv2.resize(difference,(0,0),fx=0.5,fy=0.5)
-	#cv2.imshow('diff',difference)
-	
+	masked = cv2.resize(masked,(0,0),fx=0.5,fy=0.5)
+	cv2.imshow('thresh',masked)
+	difference = cv2.resize(difference,(0,0),fx=0.5,fy=0.5)
+	cv2.imshow('diff',difference)
+
 	endOfLoop = time.time()
-	
+
 	print "time of loop: " + str(round(time.time()-beginningOfLoop,4))
-	
+
 	k = cv2.waitKey(1)
 	if k == 27:
 		break
@@ -439,7 +384,7 @@ print "counter: " + str(counter)
 print "\nthis program took " + str(time.time() - start_time) + " seconds to run."
 
 # calculate and print association time to the screen
-printUsefulStuff(zone,fps,bias)
+printUsefulStuff(zone,fps)
 
 print "\n\nCongrats. Lots of files saved.\n\n\tYour video file is saved at " + str(path) + "\n\tYour csv file with tracking coordinates is saved at " + os.getcwd() + "/" + name + ".csv"
 print "\tYour list of tentative association zones occupied in each frame is saved at " + os.getcwd() + "/" + name + ".txt"
