@@ -1,7 +1,6 @@
 import numpy as np
 import cv2, csv, os, re, sys, time, argparse, datetime
 
-
 '''
 this script started long ago as differenceImageGravel.py. It's since gone through various incarnations.
 
@@ -16,6 +15,10 @@ important: the long side of the tank must be perpendicular to the camera view
 ## we can add these to cv2.accumulateWeighted until we get to some frame number, where this image then becomes the background image
 ## we can refresh the background image by incorporting new images into cv2.accumulatedWeighted as the program progresses
 
+### to do:
+## I've noticed that when the fish is on top of the black thing in the middle of the tank, its difference image shows up as green
+## so, in the future: when you can't find the fish, only look for green regions of the tank and see if you can find the fish then
+## also to do: in boundingRect, make it so that the rectangle does not have to be parrallel to the bottom of the screen
 
 help menu:  python fernando_tracker.py --help
 arguments:
@@ -174,7 +177,7 @@ def returnLargeContour(frame,totalVideoPixels):
 		# I originally found that including blobs within the range (150, 2000) worked well for videos that were 1280x780
 		# thus the fish took up ~0.016776% to ~0.21701% of the total available pixels (921,600)
 		# based on that, I should be able to apply those percents to any video resolution and get good results
-		if area > (totalVideoPixels*0.00016776) and area < (totalVideoPixels*0.0021701) and aspect_ratio <= 3.5 and aspect_ratio >= 0.3:
+		if area > (totalVideoPixels*0.00016776) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
 			potential_centroids.append(z)
 			print "area: " + str(area) + "; aspect_ratio: " + str(aspect_ratio)
 
@@ -192,12 +195,44 @@ def returnLargeContour(frame,totalVideoPixels):
 			csv_writer.writerow((centroid_x,centroid_y,counter))
 			return((centroid_x,centroid_y))
 
+# gets background image when the input is a video file
+def getBackgroundImage(vid,numFrames):
+	print "\n\n\n\n-----------------------\n\ninitializing background detection\n"
+
+	# set a counter
+	i = 0
+	_,frame = vid.read()
+	# initialize an empty array the same size of the pic to update
+	update = np.float32(frame)
+
+	# loop through the first numFrames frames to get the background image
+	while i < numFrames:
+		# grab a frame
+		_,frame = vid.read()
+
+		# main function
+		cv2.accumulateWeighted(frame,update,0.001)
+		final = cv2.convertScaleAbs(update)
+		# increment the counter
+		i += 1
+
+	# print something every 100 frames so the user knows the gears are grinding
+		if i%100 == 0:
+			print "detecting background -- on frame " + str(i) + " of " + str(numFrames)
+
+	return final
+
+# adds frame to the background image called old_background_image, returns updated image
+def addToBackgroundImage(frame,old_background_image):
+	cv2.accumulateWeighted(frame,old_background_image,0.001)
+	final = cv2.convertScaleAbs(update)
+	return final
 
 
 def find_tank_bounds(image,name_of_trial):
 
 	# blur the image a lot
-	blur = cv2.blur(image, (11,11))
+	blur = cv2.blur(image, (15,15))
 	# convert to hsv
 	hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
 	# get only the whitish parts
@@ -208,25 +243,36 @@ def find_tank_bounds(image,name_of_trial):
 	# find largest contour
 	largestCon = sorted(contours, key = cv2.contourArea, reverse = True)[:1]
 	for j in largestCon:
-		m = cv2.moments(j)
-		centroid_x = int(m['m10']/m['m00'])
-		centroid_y = int(m['m01']/m['m00'])
-		x,y,w,h = cv2.boundingRect(j)
-		print "x,y,w,h:"
-		print x,y,w,h
+		# to be a bit more precise, we use minAreaRect instead of boundingRect
+		#x,y,w,h = cv2.boundingRect(j)
+		rect = cv2.minAreaRect(j)
+		coords, dim, angle = rect
+		x, y = coords
+		w, h = dim
+		# note that these measurements assume the long edge of the bottom of the tank is parrallel with the bottom edge of the video feed
+		print "x, y, w, h, angle:"
+		print x, y, w, h, angle
+
+		# to get actual bounds of the rectange, accounting for the fact that it might be tilted slightly
+		box = cv2.cv.BoxPoints(rect)
+		# convert to integers
+		box = tuple([ (int(x),int(y)) for x,y in box])
 
 		# declare the tank bounds globally
 		global top_bound, left_bound, right_bound, lower_bound
-		top_bound, left_bound, right_bound, lower_bound = int(y) + int(h) + 50, int(x) - 50, int(x) + 50 + int(w), int(y) - 50
-		print "rectange bounds: "
+		top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
+		print "rectangle bounds: "
 		print top_bound, left_bound, right_bound, lower_bound
 
 		# save a photo of the tank bounds for reference:
 		# first make a copy of the image
 		image_copy = image.copy()
+
+		#box = np.int0(box)
+		#cv2.drawContours(image_copy,[box],0,(0,255,255),10)
 		cv2.rectangle(image_copy,(left_bound, top_bound),(right_bound,lower_bound),(0,255,0),10)
-		#cv2.rectangle(image_copy,(int(x*0.8),int(y*0.8)),(int(x*0.8)+int(w*1.2),int(y*0.8)+int(h*1.2)),(0,255,0),10)
 		cv2.imwrite(str(name_of_trial) + "_tank_bounds.jpg", image_copy)
+
 
 		# save tank bound coordinates to a file for parsing later if need be
 		coord_file = open(str(name_of_trial) + "_tank_bounds.txt", "w")
@@ -259,7 +305,7 @@ print "grabbed first frame? " + str(ret)
 
 # calculate background image of tank for x frames
 
-background = getBackgroundImage(cap,5000)
+background = getBackgroundImage(cap,200)
 
 # find the bounds of the tank:
 find_tank_bounds(background,name)
@@ -305,6 +351,9 @@ while(cap.isOpened()):
 	# for timing, maintaining constant fps
 	beginningOfLoop = time.time()
 
+	# read in the frame
+	ret,frame = cap.read()
+
 	# maybe do a try statement here?
 	if ret == False:
 		print "didn't read frame from video file"
@@ -341,9 +390,9 @@ while(cap.isOpened()):
 
 	# draw the centroids on the image and place text
 	cv2.circle(frame,coordinates[-1],4,[0,0,255],-1)
-	cv2.putText(frame,str(name),(int(camWidth/5),50), cv2.FONT_HERSHEY_PLAIN, 3.0,(0,0,0))
-	cv2.putText(frame,str(zone[-1]),(leftBound,top_bound+50), cv2.FONT_HERSHEY_PLAIN, 3.0,(255,255,255))
-	cv2.putText(frame,str("frame " + str(counter)), (leftBound,top_bound+100),cv2.FONT_HERSHEY_PLAIN, 3.0,(0,0,0))
+	cv2.putText(frame,str(name),(int(camWidth/5),50), cv2.FONT_HERSHEY_PLAIN, 5.0,(0,0,0))
+	cv2.putText(frame,str(zone[-1]),(leftBound,top_bound+50), cv2.FONT_HERSHEY_PLAIN, 5.0,(0,0,0))
+	cv2.putText(frame,str("frame " + str(counter)), (leftBound,top_bound+100),cv2.FONT_HERSHEY_PLAIN, 5.0,(0,0,0))
 
 	#resize image for the laptop
 	frame = cv2.resize(frame,(0,0),fx=0.5,fy=0.5)
