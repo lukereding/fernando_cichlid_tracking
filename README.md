@@ -14,3 +14,6 @@ Put this in a shell script, then run as `bash -x name_of_script.sh`
 
 Each processor (assuming four processors) gets it's own job.
 Still need to inorporating making sure a constant frame rate is maintained (use the --fps argument of the python script for this)
+
+#### to install python, opencv on windows, follow these directions:
+http://opencvpython.blogspot.com/2012/05/install-opencv-in-windows-for-python.html
