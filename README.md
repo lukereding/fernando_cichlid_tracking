@@ -17,3 +17,6 @@ Still need to inorporating making sure a constant frame rate is maintained (use 
 
 #### to install python, opencv on windows, follow these directions:
 http://opencvpython.blogspot.com/2012/05/install-opencv-in-windows-for-python.html
+
+#### ffmpeg
+To make a video from the frames you save, try `ffmpeg -f image2 -i %08d.jpg -r 5 -vcodec libx264 name_of_video.avi`
