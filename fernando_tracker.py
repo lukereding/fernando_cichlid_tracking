@@ -280,7 +280,7 @@ def find_tank_bounds(image,name_of_trial):
 
 
 		# save tank bound coordinates to a file for parsing later if need be
-		coord_file = open(str(name_of_trial) + "_tank_bounds.txt", "w")
+		coord_file = open(name + "/" + str(name_of_trial) + "_tank_bounds.txt", "w")
 		coord_file.write("top bound: " + str(top_bound) + "\n" + "left bound: " + str(left_bound) + "\n" + "right bound: " + str(right_bound) + "\n" + "lower bound: " + str(lower_bound) + "\n")
 		coord_file.close()
 
@@ -449,7 +449,7 @@ while(cap.isOpened()):
 ###################################
 
 # save list of association zones
-output = open(name+'.txt', 'wb')
+output = open(name + "/" + name+'.txt', 'wb')
 for line in zone:
 	output.write("%s\n" % line)
 output.close()
