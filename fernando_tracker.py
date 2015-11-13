@@ -73,6 +73,8 @@ csv_writer.writerow(("x","y","frame"))
 drawing = False # true if mouse is pressed
 ix,iy = -1,-1
 
+write_video = True
+
 # print python version
 print "python version:\n"
 print sys.version
@@ -144,7 +146,7 @@ def printUsefulStuff(listOfSides,fps):
 def setupVideoWriter(width, height,videoName):
 	# Define the codec and create VideoWriter object
 	fourcc = cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
-	videoName = os.getcwd() + '/' + videoName + ".avi"
+	videoName = os.getcwd() + '/' + name + "/" + videoName + ".avi"
 	out = cv2.VideoWriter(videoName,fourcc, 5.0, (int(width),int(height)))
 	return out, videoName
 
@@ -296,9 +298,11 @@ path = args["pathToVideo"]
 try:
 	path = int(path)
 	live = True
+	print "live video detected"
 except:
 	pass
 	live = False
+	print "looks like we're trying from a file"
 
 cap = cv2.VideoCapture(path)
 global camWidth, camHeight # for masking
@@ -312,20 +316,18 @@ if live == False:
 		ret,frame = cap.read()
 		i += 1
 	print "grabbed first frame? " + str(ret)
-
-
-	# need to do this step after the drawing the rectangle so that we know the bounds for masking in the call to convertToHSV
-	#hsv_initial = convertToHSV(frame)
-
-	# calculate background image of tank for x frames
-
 	background = getBackgroundImage(cap,200)
 
 elif live == True:
-	ret,background = cap.read()
+	# if live, we take the background image to be the first image we capture
+	ret, background = cap.read()
 	if ret == False:
 		print "could not read frame from the webcam"
 		sys.exit(1)
+
+if write_video == True:
+	out, _ = setupVideoWriter(camWidth, camHeight, name)
+
 
 # find the bounds of the tank:
 find_tank_bounds(background,name)
@@ -409,7 +411,10 @@ while(cap.isOpened()):
 	print "Center: " + str(center) + "\n"
 
 	# save the frame before drawing on it
-	cv2.imwrite(name + "/" + '%08d' % counter + ".jpg", frame)
+	if write_video == False:
+		cv2.imwrite(name + "/" + '%08d' % counter + ".jpg", frame)
+	elif write_video == True:
+		out.write(frame)
 
 	# draw the centroids on the image and place text
 	cv2.circle(frame,coordinates[-1],4,[0,0,255],-1)
