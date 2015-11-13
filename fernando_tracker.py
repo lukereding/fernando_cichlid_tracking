@@ -58,10 +58,14 @@ lower = np.array([0,0,0])
 upper = np.array([255,255,20])
 counter = 0
 
-# output to csv file where the results will be written
+# create new folder if it doesn't exist
 name = args["videoName"]
+if not os.path.exists(name):
+    os.makedirs(name)
+
+# output to csv file where the results will be written
 print "name of csv file: " + str(name) + ".csv"
-myfile = open(name+".csv",'wb')
+myfile = open(name + "/" + name+".csv",'wb')
 csv_writer = csv.writer(myfile, quoting=csv.QUOTE_NONE)
 csv_writer.writerow(("x","y","frame"))
 
@@ -155,7 +159,7 @@ def convertToHSV(frame):
 	mask = np.zeros((camHeight, camWidth, 3),np.uint8)
 	# use rectangle bounds for masking
 	mask[top_bound:lower_bound,left_bound:right_bound] = hsv[top_bound:lower_bound,left_bound:right_bound]
-	cv2.imwrite("mask.jpg",mask)
+	cv2.imwrite(name + "/mask.jpg",mask)
 	return mask
 
 
@@ -272,7 +276,7 @@ def find_tank_bounds(image,name_of_trial):
 		#box = np.int0(box)
 		#cv2.drawContours(image_copy,[box],0,(0,255,255),10)
 		cv2.rectangle(image_copy,(left_bound, top_bound),(right_bound,lower_bound),(0,255,255),10)
-		cv2.imwrite(str(name_of_trial) + "_tank_bounds.jpg", image_copy)
+		cv2.imwrite(name + "/" + str(name_of_trial) + "_tank_bounds.jpg", image_copy)
 
 
 		# save tank bound coordinates to a file for parsing later if need be
@@ -291,34 +295,44 @@ path = args["pathToVideo"]
 # if it's not a file but a webcam feed, change the path variable to an int
 try:
 	path = int(path)
+	live = True
 except:
 	pass
+	live = False
+
 cap = cv2.VideoCapture(path)
 global camWidth, camHeight # for masking
 camWidth, camHeight = cap.get(3), cap.get(4)
 print "\n\nvideo dimensions: " + str(camWidth) + " x " + str(camHeight)
 
-# grab the 20th frame for drawing the rectangle
-i = 0
-while i <20:
-	ret,frame = cap.read()
-	i += 1
-print "grabbed first frame? " + str(ret)
+if live == False:
+	# grab the 20th frame for drawing the rectangle
+	i = 0
+	while i <20:
+		ret,frame = cap.read()
+		i += 1
+	print "grabbed first frame? " + str(ret)
 
 
-# need to do this step after the drawing the rectangle so that we know the bounds for masking in the call to convertToHSV
-#hsv_initial = convertToHSV(frame)
+	# need to do this step after the drawing the rectangle so that we know the bounds for masking in the call to convertToHSV
+	#hsv_initial = convertToHSV(frame)
 
-# calculate background image of tank for x frames
+	# calculate background image of tank for x frames
 
-background = getBackgroundImage(cap,200)
+	background = getBackgroundImage(cap,200)
+
+elif live == True:
+	ret,background = cap.read()
+	if ret == False:
+		print "could not read frame from the webcam"
+		sys.exit(1)
 
 # find the bounds of the tank:
 find_tank_bounds(background,name)
 
 # convert background to HSV and save a copy of the background image for reference
 hsv_initial = convertToHSV(background)
-cv2.imwrite(name + "_background.jpg",background)
+cv2.imwrite(name + "/" + name + "_background.jpg",background)
 
 # keep a list of coordinates of the fish.
 # the idea is, for the purposes of this code, if we can't ID the fish we assume it's stopped
@@ -394,6 +408,9 @@ while(cap.isOpened()):
 
 	print "Center: " + str(center) + "\n"
 
+	# save the frame before drawing on it
+	cv2.imwrite(name + "/" + '%08d' % counter + ".jpg", frame)
+
 	# draw the centroids on the image and place text
 	cv2.circle(frame,coordinates[-1],4,[0,0,255],-1)
 	cv2.putText(frame,str(name),(int(camWidth/5),50), cv2.FONT_HERSHEY_PLAIN, 5.0,(0,0,0))
@@ -409,6 +426,10 @@ while(cap.isOpened()):
 	cv2.imshow('diff',difference)
 
 	endOfLoop = time.time()
+
+	if counter%100 == 0:
+		pass
+		#hsv_initial = addToBackgroundImage(hsv,hsv_initial)
 
 	print "time of loop: " + str(round(time.time()-beginningOfLoop,4))
 
@@ -444,9 +465,6 @@ try:
 # just to make sure it works:
 except:
 	printUsefulStuff(zone,fps)
-
-print "\n\nCongrats. Lots of files saved.\n\n\tYour video file is saved at " + str(path) + "\n\tYour csv file with tracking coordinates is saved at " + os.getcwd() + "/" + name + ".csv"
-print "\tYour list of tentative association zones occupied in each frame is saved at " + os.getcwd() + "/" + name + ".txt"
 
 
 cv2.destroyAllWindows()
