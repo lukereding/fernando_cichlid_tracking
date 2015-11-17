@@ -8,9 +8,13 @@ print(args)
 # change the working directory to whatever the directory passed as the arugment is 
 setwd(args[1])
 
+# get required pakcages if not installed
+if (!"adimpro" %in% installed.packages()) install.packages("adimpro")
+if (!"viridis" %in% installed.packages()) install.packages("viridis")
+
+
 # plot the background image
 require(adimpro)
-
 
 # show the image
 background_file <- list.files(path=".", pattern = "*.jpg", full.names=T)[2]
