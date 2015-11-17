@@ -1,3 +1,5 @@
+ #!/usr/bin/python
+
 import numpy as np
 import cv2, csv, os, re, sys, time, argparse, datetime
 
@@ -53,9 +55,6 @@ fps = args["fps"]
 # calculate the time that the program should start the main loop
 start_time = time.time()
 
-# initialize some constants
-lower = np.array([0,0,0])
-upper = np.array([255,255,20])
 counter = 0
 
 # create new folder if it doesn't exist
@@ -161,7 +160,7 @@ def convertToHSV(frame):
 	mask = np.zeros((camHeight, camWidth, 3),np.uint8)
 	# use rectangle bounds for masking
 	mask[top_bound:lower_bound,left_bound:right_bound] = hsv[top_bound:lower_bound,left_bound:right_bound]
-	cv2.imwrite(name + "/mask.jpg",mask)
+	#cv2.imwrite(name + "/mask.jpg",mask)
 	return mask
 
 
@@ -184,7 +183,7 @@ def returnLargeContour(frame,totalVideoPixels):
 		# I originally found that including blobs within the range (150, 2000) worked well for videos that were 1280x780
 		# thus the fish took up ~0.016776% to ~0.21701% of the total available pixels (921,600)
 		# based on that, I should be able to apply those percents to any video resolution and get good results
-		if area > (totalVideoPixels*0.00016) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
+		if area > (totalVideoPixels*0.00010) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
 			potential_centroids.append(z)
 			print "area: " + str(area) + "; aspect_ratio: " + str(aspect_ratio)
 
@@ -243,7 +242,7 @@ def find_tank_bounds(image,name_of_trial):
 	# convert to hsv
 	hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
 	# get only the whitish parts
-	mask = cv2.inRange(hsv,np.array([10,0,80]),np.array([80,108,240]))
+	mask = cv2.inRange(hsv,np.array([10,0,0]),np.array([70,75,200]))
 
 	# find all contours in the frame
 	contours = cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[0]
@@ -267,7 +266,10 @@ def find_tank_bounds(image,name_of_trial):
 
 		# declare the tank bounds globally
 		global top_bound, left_bound, right_bound, lower_bound
-		top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
+		### 17 Nov 2015
+		# given what fernando's tank looks like and the fact the tank's position in the video screen shouldn't change a whole lot, I'm just going to hard-code these values. If you want to go back to have the tank bounds determined programatically, uncomment the line below:
+		top_bound, left_bound, right_bound, lower_bound = 200, 200, 1100, 550
+		#top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
 		print "rectangle bounds: "
 		print top_bound, left_bound, right_bound, lower_bound
 
@@ -302,7 +304,7 @@ try:
 except:
 	pass
 	live = False
-	print "looks like we're trying from a file"
+	print "looks like we're reading from a file"
 
 cap = cv2.VideoCapture(path)
 global camWidth, camHeight # for masking
@@ -384,7 +386,7 @@ while(cap.isOpened()):
 	# do image manipulations for tracking
 	hsv = convertToHSV(frame)
 	difference = cv2.subtract(hsv_initial,hsv)
-	masked = cv2.inRange(difference,lower,upper)
+	masked = cv2.inRange(difference,np.array([0,0,0]),np.array([255,255,10]))
 	maskedInvert = cv2.bitwise_not(masked)
 
 	# find the centroid of the largest blob
