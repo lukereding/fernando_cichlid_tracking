@@ -1,0 +1,4 @@
+top bound: 200
+left bound: 200
+right bound: 1100
+lower bound: 550
