@@ -53,3 +53,17 @@ for(i in 1:(nrow(coords)-1)){
 
 # finish plotting
 dev.off()
+
+### save a stacked bar plot of the sides the fish was on:
+png("./graph.png")
+# read in the .txt file saved from the tracker
+sides <- list.files(path=".", pattern = "*.txt", full.names=T)[2]
+sides <- read.table(sides)
+# factor
+sides[,1] <- factor(sides[,1])
+
+counts <- table(sides)
+
+barplot(counts, main="sides of the tank occupied by the fish", xlab="side of tank", col=viridis(4)[1:3])
+
+dev.off()
