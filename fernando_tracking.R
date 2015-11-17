@@ -2,7 +2,13 @@
 ## started 17 Nov 2015
 # this script should be run from the command line like `Rscript fernando_tracking.R /path/to/dir/containing/.txt/and/.csv/files`
 
+# print session info
+sessionInfo()
+
+# for debugging
 options(echo=TRUE)
+
+# get argument(s)
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
 # change the working directory to whatever the directory passed as the arugment is 
