@@ -268,7 +268,7 @@ def find_tank_bounds(image,name_of_trial):
 		global top_bound, left_bound, right_bound, lower_bound
 		### 17 Nov 2015
 		# given what fernando's tank looks like and the fact the tank's position in the video screen shouldn't change a whole lot, I'm just going to hard-code these values. If you want to go back to have the tank bounds determined programatically, uncomment the line below:
-		top_bound, left_bound, right_bound, lower_bound = 200, 200, 1100, 550
+		top_bound, left_bound, right_bound, lower_bound = 250, 200, 1100, 525
 		#top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
 		print "rectangle bounds: "
 		print top_bound, left_bound, right_bound, lower_bound

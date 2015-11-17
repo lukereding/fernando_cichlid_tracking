@@ -2,13 +2,7 @@
 ## started 17 Nov 2015
 # this script should be run from the command line like `Rscript fernando_tracking.R /path/to/dir/containing/.txt/and/.csv/files`
 
-# print session info
-sessionInfo()
-
-# for debugging
 options(echo=TRUE)
-
-# get argument(s)
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
 # change the working directory to whatever the directory passed as the arugment is 
@@ -20,7 +14,7 @@ if (!"viridis" %in% installed.packages()) install.packages("viridis",repos='http
 
 
 # plot the background image
-require(adimpro)
+library(adimpro)
 
 # show the image
 background_file <- list.files(path=".", pattern = "*.jpg", full.names=T)[2]
@@ -74,6 +68,6 @@ sides[,1] <- factor(sides[,1])
 
 counts <- table(sides)
 
-barplot(counts, main="sides of the tank occupied by the fish", xlab="side of tank", col=viridis(4)[1:3])
+barplot(counts, main="", xlab="side of tank", col=viridis(4)[1:3], ylab= "number of frames")
 
 dev.off()
