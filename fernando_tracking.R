@@ -9,8 +9,8 @@ print(args)
 setwd(args[1])
 
 # get required pakcages if not installed
-if (!"adimpro" %in% installed.packages()) install.packages("adimpro")
-if (!"viridis" %in% installed.packages()) install.packages("viridis")
+if (!"adimpro" %in% installed.packages()) install.packages("adimpro",repos='http://cran.us.r-project.org')
+if (!"viridis" %in% installed.packages()) install.packages("viridis",repos='http://cran.us.r-project.org')
 
 
 # plot the background image
