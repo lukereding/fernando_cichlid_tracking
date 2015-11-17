@@ -2,6 +2,8 @@
 ## started 17 Nov 2015
 # this script should be run from the command line like `Rscript fernando_tracking.R /path/to/dir/containing/.txt/and/.csv/files`
 
+sessionInfo()
+
 options(echo=TRUE)
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
@@ -17,8 +19,9 @@ if (!"viridis" %in% installed.packages()) install.packages("viridis",repos='http
 library(adimpro)
 
 # show the image
-background_file <- list.files(path=".", pattern = "*.jpg", full.names=T)[2]
+(background_file <- list.files(path=".", pattern = "*.jpg", full.names=T)[1])
 back <- read.image(background_file, compress=TRUE)
+back <- rotate.image(back, angle = 180, compress=NULL)
 # set up for saving
 png(filename = "./tracking_output.png", width = back$dim[1], height = back$dim[2])
 show.image(back, xlim=c(0,back$dim[1]), ylim=c(0,back$dim[2]), bty="n", xaxt = "n", yaxt = "n")
@@ -52,8 +55,9 @@ library(viridis)
 cols <- viridis(nrow(coords) -1)
 
 for(i in 1:(nrow(coords)-1)){
-  lines(x = c(coords$x[i], coords$x[i+1]), y = c(coords$y[i], coords$y[i+1]), col = cols[i], lwd=1.2)
+  lines(x = c(coords$x[i], coords$x[i+1]), y = c(coords$y[i], coords$y[i+1]), col = cols[i], lwd=1.5)
 }
+
 
 # finish plotting
 dev.off()
