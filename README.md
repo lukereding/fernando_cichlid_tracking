@@ -6,7 +6,10 @@ The goal is to create a real-time tracker that can detect a single fish in a tan
 
 
 #### running the `R` script
-The `R` script does a couple things and should be run from the command line. First, it draws the tracks of the fish over a photo of the tank. Second, it plot the distribution of the number of frames the fish spends on the right, left, and middle parts of the tank. It is run from this repo like `Rscript fernando_tracking.R /path/to/dir` where `path/to/dir` is the path to the directory that the tracker outputs and contains all kinds of goodies. The script will save but the photo of the tank with the tracking results on top of it and the graph to this directory.
+The `R` script does a couple things and should be run from the command line. It is run from this repo like `Rscript fernando_tracking.R /path/to/dir` where `path/to/dir` is the path to the directory that the tracker outputs and contains all kinds of goodies. The script does a few things:
++ It draws the tracks of the fish over a photo of the tank. The lighter colors represent the fish's position later in the video.
++ It saves a bar graph with the bars: one each for the number of frames the fish spends on the left, right, and middle third of the tank.
++ It outputs the number of transits the fish made (1) from the middle to the left part of the tank and (2) from the middle to the right part of the tank. Check your shell; that's where it'll output to.
 
 #### ideas for doing things four at a time:
 python fernando_tracker.py -i 0 -n camera_0 &
