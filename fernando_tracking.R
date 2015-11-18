@@ -7,7 +7,7 @@ sessionInfo()
 options(echo=TRUE)
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
-# change the working directory to whatever the directory passed as the arugment is 
+# change the working directory to whatever the directory passed as the arugment is
 setwd(args[1])
 
 # get required pakcages if not installed
@@ -75,3 +75,6 @@ counts <- table(sides)
 barplot(counts, main="", xlab="side of tank", col=viridis(4)[1:3], ylab= "number of frames")
 
 dev.off()
+
+# use imageMagick to rotate the image back 180 degrees
+system("convert ./tracking_output.png -rotate 180 ./tracking_output.png")

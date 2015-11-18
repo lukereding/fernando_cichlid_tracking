@@ -318,7 +318,7 @@ if live == False:
 		ret,frame = cap.read()
 		i += 1
 	print "grabbed first frame? " + str(ret)
-	background = getBackgroundImage(cap,200)
+	background = getBackgroundImage(cap,2000)
 
 elif live == True:
 	# if live, we take the background image to be the first image we capture
@@ -336,7 +336,8 @@ find_tank_bounds(background,name)
 
 # convert background to HSV and save a copy of the background image for reference
 hsv_initial = convertToHSV(background)
-cv2.imwrite(name + "/" + name + "_background.jpg",background)
+cv2.imwrite(name + "/" + name + "_background.jpg", background)
+cv2.imwrite(name + "/" + name + "_background_hsv.jpg", hsv_initial)
 
 # keep a list of coordinates of the fish.
 # the idea is, for the purposes of this code, if we can't ID the fish we assume it's stopped
