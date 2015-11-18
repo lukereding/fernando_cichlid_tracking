@@ -24,7 +24,7 @@ back <- read.image(background_file, compress=TRUE)
 back <- rotate.image(back, angle = 180, compress=NULL)
 # set up for saving
 png(filename = "./tracking_output.png", width = back$dim[1], height = back$dim[2])
-show.image(back, xlim=c(0,back$dim[1]), ylim=c(0,back$dim[2]), bty="n", xaxt = "n", yaxt = "n")
+show.image(back, xlim=c(0,back$dim[1]), ylim=c(0,back$dim[2]), bty="n", xaxt = "n", yaxt = "n", main=args[1])
 
 # read in coordinate data from tracking program
 coords <- list.files(path=".", pattern = "*.csv", full.names=T)[1]
@@ -78,3 +78,20 @@ dev.off()
 
 # use imageMagick to rotate the image back 180 degrees
 system("convert ./tracking_output.png -rotate 180 ./tracking_output.png")
+
+
+# calculate number of times the fish enters the left or right zone of the tank
+sides[,1] <- as.character(sides[,1])
+entries_right <- entries_left <- 0
+for(i in 1:(nrow(sides) - 1)){
+    if(sides[i+1, 1] != sides[i, 1]){
+        if(sides[i, 1] == "right"){
+            entries_right <- entries_right + 1
+        }
+        else if(sides[i, 1] == "left"){
+            entries_left <- entries_left + 1
+        }
+    }
+}
+x <- paste("entries into the left side of the tank: ", entries_left, "\nentries into the right side of the tank: ", entries_right)
+cat(x)
