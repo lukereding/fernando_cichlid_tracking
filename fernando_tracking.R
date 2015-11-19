@@ -102,7 +102,11 @@ x <- paste("entries into the left side of the tank: ", entries_left, "\nentries 
 cat(x)
 
 # paste the results into a legend
-legend("topright", legend = x, bty="n")
+y <- as.data.frame(counts)
+left <- y[y$sides=="left",2]
+right <- y[y$sides=="right",2]
+ifelse(left > right, pos <- "topright", pos <- "topleft")
+legend(pos, legend = x, bty="n")
 
 # save it
 dev.off()
