@@ -83,7 +83,7 @@ sides[,1] <- factor(sides[,1])
 counts <- table(sides)
 
 # plot it
-barplot(counts, main="", xlab="side of tank", col=viridis(4)[1:3], ylab= "number of frames")
+barplot(counts, main="", xlab="side of tank", col=plasma(4)[1:3], ylab= "number of frames")
 
 # calculate number of times the fish enters the left or right zone of the tank
 sides[,1] <- as.character(sides[,1])
