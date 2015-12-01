@@ -19,7 +19,7 @@ if (!"viridis" %in% installed.packages()) install.packages("viridis",repos='http
 library(adimpro)
 
 # show the image
-(background_file <- list.files(path=".", pattern = "*.jpg", full.names=T)[1])
+(background_file <- list.files(path=".", pattern = "*_tank_bounds.jpg", full.names=T)[1])
 back <- read.image(background_file, compress=TRUE)
 # because of differences in the coordinate schemes of R and Python, we need to rotate the image 180 degrees \
 # in order to have the tracks plotted in the right spot.
