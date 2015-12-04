@@ -368,7 +368,7 @@ cap = cv2.VideoCapture(path)
 ###########################
 ### the main loop######
 ###################
-for i in range(0, 4500):
+while(cap.isOpened()):
 
 	print "frame " + str(counter) + "\n\n"
 
