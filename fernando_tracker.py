@@ -8,15 +8,6 @@ this script started long ago as differenceImageGravel.py. It's since gone throug
 
 The goal now (4 Nov 2015) is to modify the script to meet fernado's needs for his cichlid study
 
-important: the long side of the tank must be perpendicular to the camera view
-
-
-#### some challenges #######
-## to do this in real time, we can't use a background image that we've generated using cv2.accumulateWeighted
-## what we CAN do is to use the first frame as our background image and as the program continues to get new frames,
-## we can add these to cv2.accumulateWeighted until we get to some frame number, where this image then becomes the background image
-## we can refresh the background image by incorporting new images into cv2.accumulatedWeighted as the program progresses
-
 ### to do:
 ## I've noticed that when the fish is on top of the black thing in the middle of the tank, its difference image shows up as green
 ## so, in the future: when you can't find the fish, only look for green regions of the tank and see if you can find the fish then
@@ -26,59 +17,10 @@ help menu:  python fernando_tracker.py --help
 arguments:
 --pathToVideo or -i : full or relative path to video file or input number.
 --videoName or -n: used to save files associated with the trial. required
---fps or -f: frames per second
 
 example of useage: python fernando_tracker.py -i /Volumes/NEXT/Video\ 5.mp4 -n video5
 
 '''
-print time.strftime('%X %x %Z')
-
-# initialize some constants, lists, csv writer
-# construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--pathToVideo", help = "integer that represents either the relative or full path to the video you want to analyze",nargs='?',default=0)
-ap.add_argument("-n", "--videoName", help = "name of the video to be saved",required=True)
-ap.add_argument("-f", "--fps", help = "frames per second of the video")
-
-args = ap.parse_args()
-
-# print arguments to the screen
-print("\n\n\tinput path: {}".format(args.pathToVideo))
-print("\tname of trial: {}".format(args.videoName))
-if args.fps is not None:
-	print("\tfps of video: {}".format(args.fps))
-
-args = vars(ap.parse_args())
-
-fps = args["fps"]
-
-# calculate the time that the program should start the main loop
-start_time = time.time()
-
-counter = 0
-
-# create new folder if it doesn't exist
-name = args["videoName"]
-if not os.path.exists(name):
-    os.makedirs(name)
-
-# output to csv file where the results will be written
-print "name of csv file: " + str(name) + ".csv"
-myfile = open(name + "/" + name+".csv",'wb')
-csv_writer = csv.writer(myfile, quoting=csv.QUOTE_NONE)
-csv_writer.writerow(("x","y","frame"))
-
-# for drawing the rectangle around the tank at the beginning of the trial
-drawing = False # true if mouse is pressed
-ix,iy = -1,-1
-
-# print python version
-print "python version:\n"
-print sys.version
-
-######################
-# declare some functions:####
-#####################################
 
 def printUsefulStuff(listOfSides,fps):
 	fps = int(fps)
@@ -263,12 +205,11 @@ def find_tank_bounds(image,name_of_trial):
 		# convert to integers
 		box = tuple([ (int(x),int(y)) for x,y in box])
 
-		# declare the tank bounds globally
-		global top_bound, left_bound, right_bound, lower_bound
 		### 17 Nov 2015
 		# given what fernando's tank looks like and the fact the tank's position in the video screen shouldn't change a whole lot, I'm just going to hard-code these values. If you want to go back to have the tank bounds determined programatically, uncomment the line below:
-		top_bound, left_bound, right_bound, lower_bound = 250, 200, 1100, 525
-		#top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
+		#top_bound, left_bound, right_bound, lower_bound = 250, 200, 1100, 525
+		top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
+
 		print "rectangle bounds: "
 		print top_bound, left_bound, right_bound, lower_bound
 
@@ -287,22 +228,63 @@ def find_tank_bounds(image,name_of_trial):
 		coord_file.write("top bound: " + str(top_bound) + "\n" + "left bound: " + str(left_bound) + "\n" + "right bound: " + str(right_bound) + "\n" + "lower bound: " + str(lower_bound) + "\n")
 		coord_file.close()
 
+		return top_bound, left_bound, right_bound, lower_bound
 
-#########################
-## end function declarations ####
-###################################################
+
+### end fuction declarations
+
+
+print time.strftime('%X %x %Z')
+
+# initialize some constants, lists, csv writer
+# construct the argument parse and parse the arguments
+ap = argparse.ArgumentParser()
+ap.add_argument("-i", "--pathToVideo", help = "integer that represents either the relative or full path to the video you want to analyze",nargs='?',default=0)
+ap.add_argument("-n", "--videoName", help = "name of the video to be saved",required=True)
+
+args = ap.parse_args()
+
+# print arguments to the screen
+print("\n\n\tinput path: {}".format(args.pathToVideo))
+print("\tname of trial: {}".format(args.videoName))
+
+args = vars(ap.parse_args())
 
 path = args["pathToVideo"]
+
+# calculate the time that the program should start the main loop
+start_time = time.time()
+
+counter = 0
+
+# create new folder if it doesn't exist
+name = args["videoName"]
+if not os.path.exists(name):
+    os.makedirs(name)
+
+# output to csv file where the results will be written
+print "name of csv file: " + str(name) + ".csv"
+myfile = open(name + "/" + name+".csv",'wb')
+csv_writer = csv.writer(myfile, quoting=csv.QUOTE_NONE)
+csv_writer.writerow(("x","y","frame"))
+
+# print python version
+print "python version:\n"
+print sys.version
 
 # set up the video capture to the video that was the argument to the script, get feed dimensions
 # if it's not a file but a webcam feed, change the path variable to an int
 try:
 	path = int(path)
-	live = True, True
+	live = True
 	print "live video detected"
+	# no reason why this should be the case. Don't trust it.
+	fps = 5.0
+	cap = cv2.VideoCapture(path)
 except:
-	pass
-	live, write_video = False, False
+	cap = cv2.VideoCapture(path)
+	live = False
+	fps = round(cap.get(cv2.cv.CV_CAP_PROP_FPS),2)
 	print "looks like we're reading from a file"
 
 cap = cv2.VideoCapture(path)
@@ -326,12 +308,12 @@ elif live == True:
 		print "could not read frame from the webcam"
 		sys.exit(1)
 
-if write_video == True:
+if live == True:
 	out, _ = setupVideoWriter(camWidth, camHeight, name)
 
 
-# find the bounds of the tank:
-find_tank_bounds(background,name)
+# find the bounds of the tank, save 'em:
+top_bound, left_bound, right_bound, lower_bound = find_tank_bounds(background,name)
 
 # convert background to HSV and save a copy of the background image for reference
 hsv_initial = convertToHSV(background)
@@ -361,7 +343,6 @@ print "right bound: " + str(rightBound)
 
 # set up video writer specifying size (MUST be same size as input) and name (command line argument)
 #videoWriter, pathToVideo = setupVideoWriter(camWidth, camHeight,name)
-
 
 startOfTrial = time.time()
 cap = cv2.VideoCapture(path)
@@ -413,7 +394,7 @@ while(cap.isOpened()):
 	print "Center: " + str(center) + "\n"
 
 	# if writing a video, save the frame before drawing on it
-	if write_video == True:
+	if live == True:
 		out.write(frame)
 
 	# draw the centroids on the image and place text
@@ -459,17 +440,12 @@ for line in zone:
 	output.write("%s\n" % line)
 output.close()
 
+# to print useful stats at exit
+printUsefulStuff(zone,fps)
+
 ### after the program exits, print some useful stuff to the screen
 # first calculate realized fps
 print "counter: " + str(counter)
 print "\nthis program took " + str(time.time() - start_time) + " seconds to run."
-
-# calculate and print association time to the screen
-try:
-	printUsefulStuff(zone,fps)
-# just to make sure it works:
-except:
-	printUsefulStuff(zone,fps)
-
 
 cv2.destroyAllWindows()
