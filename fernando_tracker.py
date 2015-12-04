@@ -163,7 +163,7 @@ def convertToHSV(frame):
 
 
 # returns centroid from largest contour from a binary image
-@profile
+#@profile
 def returnLargeContour(frame,totalVideoPixels):
 	potential_centroids = []
 
@@ -368,7 +368,7 @@ cap = cv2.VideoCapture(path)
 ###########################
 ### the main loop######
 ###################
-while(cap.isOpened()):
+for i in range(0, 4500):
 
 	print "frame " + str(counter) + "\n\n"
 
@@ -412,10 +412,8 @@ while(cap.isOpened()):
 
 	print "Center: " + str(center) + "\n"
 
-	# save the frame before drawing on it
-	if write_video == False:
-		cv2.imwrite(name + "/" + '%08d' % counter + ".jpg", frame)
-	elif write_video == True:
+	# if writing a video, save the frame before drawing on it
+	if write_video == True:
 		out.write(frame)
 
 	# draw the centroids on the image and place text
@@ -440,9 +438,9 @@ while(cap.isOpened()):
 
 	print "time of loop: " + str(round(time.time()-beginningOfLoop,4))
 
-	k = cv2.waitKey(1)
-	if k == 27:
-		break
+	# k = cv2.waitKey(1)
+	# if k == 27:
+	# 	break
 
 	# the idea here is to re-set the 'initial' image every 150 frames in case there are changes with the light or top of the water reflections
 #	if counter % 150 ==0:
