@@ -72,8 +72,6 @@ csv_writer.writerow(("x","y","frame"))
 drawing = False # true if mouse is pressed
 ix,iy = -1,-1
 
-write_video = True
-
 # print python version
 print "python version:\n"
 print sys.version
@@ -165,6 +163,7 @@ def convertToHSV(frame):
 
 
 # returns centroid from largest contour from a binary image
+@profile
 def returnLargeContour(frame,totalVideoPixels):
 	potential_centroids = []
 
@@ -299,11 +298,11 @@ path = args["pathToVideo"]
 # if it's not a file but a webcam feed, change the path variable to an int
 try:
 	path = int(path)
-	live = True
+	live = True, True
 	print "live video detected"
 except:
 	pass
-	live = False
+	live, write_video = False, False
 	print "looks like we're reading from a file"
 
 cap = cv2.VideoCapture(path)
