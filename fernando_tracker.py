@@ -25,7 +25,7 @@ example of useage: python fernando_tracker.py -i /Volumes/NEXT/Video\ 5.mp4 -n v
 def printUsefulStuff(listOfSides,fps):
 	fps = int(fps)
 	# print realized fps for the trial
-	print "\ntotal frames: " + str(len(listOfSides))
+	print "\ntotal frames: %s" % len(listOfSides)
 
 	# now subset the list of sides into four parts. each will be a quarter of the total length of the list
 	# there is probably a better way to do this, but I don't know what it is
@@ -111,7 +111,7 @@ def returnLargeContour(frame,totalVideoPixels):
 
 	# find all contours in the frame
 	contours = cv2.findContours(frame,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[0]
-	print "number of contours: " + str(len(contours)) + "\n"
+	print "number of contours: %s\n" % len(contours)
 
 	for z in contours:
 		# calculate some things
@@ -126,7 +126,7 @@ def returnLargeContour(frame,totalVideoPixels):
 		# based on that, I should be able to apply those percents to any video resolution and get good results
 		if area > (totalVideoPixels*0.00010) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
 			potential_centroids.append(z)
-			print "area: " + str(area) + "; aspect_ratio: " + str(aspect_ratio)
+			print "area: %s \taspect ration: %s" % (area, aspect_ratio)
 
 	largestCon = sorted(potential_centroids, key = cv2.contourArea, reverse = True)[:1]
 	print str(len(largestCon)) + " largest contours"
@@ -165,7 +165,7 @@ def getBackgroundImage(vid,numFrames):
 
 	# print something every 100 frames so the user knows the gears are grinding
 		if i%100 == 0:
-			print "detecting background -- on frame " + str(i) + " of " + str(numFrames)
+			print "detecting background -- on frame %s of %s" % (i, numFrames)
 
 	return final
 
@@ -239,7 +239,7 @@ print time.strftime('%X %x %Z')
 # initialize some constants, lists, csv writer
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--pathToVideo", help = "integer that represents either the relative or full path to the video you want to analyze",nargs='?',default=0)
+ap.add_argument("-i", "--pathToVideo", help = "integer that represents the video feed from a webcam, or the relative or full path to the video you want to analyze",nargs='?',default=0)
 ap.add_argument("-n", "--videoName", help = "name of the video to be saved",required=True)
 
 args = ap.parse_args()
@@ -290,7 +290,7 @@ except:
 cap = cv2.VideoCapture(path)
 global camWidth, camHeight # for masking
 camWidth, camHeight = cap.get(3), cap.get(4)
-print "\n\nvideo dimensions: " + str(camWidth) + " x " + str(camHeight)
+print "\n\nvideo dimensions: %s x %s" %(camWidth, camHeight)
 
 if live == False:
 	# grab the 20th frame for drawing the rectangle
@@ -298,7 +298,7 @@ if live == False:
 	while i <20:
 		ret,frame = cap.read()
 		i += 1
-	print "grabbed first frame? " + str(ret)
+	print "grabbed first frame? %s" % ret
 	background = getBackgroundImage(cap,2000)
 
 elif live == True:
@@ -391,7 +391,7 @@ while(cap.isOpened()):
 		zone.append("neutral")
 
 
-	print "Center: " + str(center) + "\n"
+	print "Center: %s \n" % center
 
 	# if writing a video, save the frame before drawing on it
 	if live == True:
@@ -417,7 +417,7 @@ while(cap.isOpened()):
 		pass
 		#hsv_initial = addToBackgroundImage(hsv,hsv_initial)
 
-	print "time of loop: " + str(round(time.time()-beginningOfLoop,4))
+	print "time of loop: %s" % round(time.time()-beginningOfLoop,4)
 
 	# k = cv2.waitKey(1)
 	# if k == 27:
@@ -435,7 +435,7 @@ while(cap.isOpened()):
 ###################################
 
 # save list of association zones
-output = open(name + "/" + name+'.txt', 'wb')
+output = open("%s/%s.txt" %(name, name), 'wb')
 for line in zone:
 	output.write("%s\n" % line)
 output.close()
@@ -445,7 +445,7 @@ printUsefulStuff(zone,fps)
 
 ### after the program exits, print some useful stuff to the screen
 # first calculate realized fps
-print "counter: " + str(counter)
+print "counter: %s" % counter
 print "\nthis program took " + str(time.time() - start_time) + " seconds to run."
 
 cv2.destroyAllWindows()
