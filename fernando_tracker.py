@@ -1,4 +1,4 @@
- #!/usr/bin/python
+#!/usr/bin/python
 
 import numpy as np
 import cv2, csv, os, re, sys, time, argparse, datetime
@@ -91,7 +91,7 @@ def setupVideoWriter(width, height,videoName):
 
 # converts a frame to HSV, blurs it, masks it to only get the tank by itself
 ## TO DO: get rid of tank bounds as global variables, include as arguments to this function
-def convertToHSV(frame):
+def convertToHSV(frame,top_bound, left_bound, right_bound, lower_bound):
 	# blur image to make color uniform
 	blurred = cv2.blur(frame,(7,7))
 	# conver to hsv
@@ -313,10 +313,10 @@ if live == True:
 
 
 # find the bounds of the tank, save 'em:
-top_bound, left_bound, right_bound, lower_bound = find_tank_bounds(background,name)
+lower_bound, left_bound, right_bound, top_bound = find_tank_bounds(background,name)
 
 # convert background to HSV and save a copy of the background image for reference
-hsv_initial = convertToHSV(background)
+hsv_initial = convertToHSV(background, top_bound, left_bound, right_bound, lower_bound)
 cv2.imwrite(name + "/" + name + "_background.jpg", background)
 cv2.imwrite(name + "/" + name + "_background_hsv.jpg", hsv_initial)
 
@@ -365,7 +365,7 @@ while(cap.isOpened()):
 		break
 
 	# do image manipulations for tracking
-	hsv = convertToHSV(frame)
+	hsv = convertToHSV(frame,top_bound, left_bound, right_bound, lower_bound)
 	difference = cv2.subtract(hsv_initial,hsv)
 	masked = cv2.inRange(difference,np.array([0,0,0]),np.array([255,255,10]))
 	maskedInvert = cv2.bitwise_not(masked)
@@ -419,9 +419,9 @@ while(cap.isOpened()):
 
 	print "time of loop: %s" % round(time.time()-beginningOfLoop,4)
 
-	# k = cv2.waitKey(1)
-	# if k == 27:
-	# 	break
+	k = cv2.waitKey(1)
+	if k == 27:
+		break
 
 	# the idea here is to re-set the 'initial' image every 150 frames in case there are changes with the light or top of the water reflections
 #	if counter % 150 ==0:
