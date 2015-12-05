@@ -390,9 +390,6 @@ while(cap.isOpened()):
 	else:
 		zone.append("neutral")
 
-
-	print "Center: %s \n" % center
-
 	# if writing a video, save the frame before drawing on it
 	if live == True:
 		out.write(frame)
