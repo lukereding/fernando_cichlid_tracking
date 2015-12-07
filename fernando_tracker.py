@@ -91,6 +91,7 @@ def setupVideoWriter(width, height,videoName):
 
 # converts a frame to HSV, blurs it, masks it to only get the tank by itself
 ## TO DO: get rid of tank bounds as global variables, include as arguments to this function
+#@profile
 def convertToHSV(frame,top_bound, left_bound, right_bound, lower_bound):
 	# blur image to make color uniform
 	blurred = cv2.blur(frame,(7,7))
