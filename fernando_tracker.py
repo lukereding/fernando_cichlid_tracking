@@ -125,7 +125,7 @@ def returnLargeContour(frame,totalVideoPixels):
 		# I originally found that including blobs within the range (150, 2000) worked well for videos that were 1280x780
 		# thus the fish took up ~0.016776% to ~0.21701% of the total available pixels (921,600)
 		# based on that, I should be able to apply those percents to any video resolution and get good results
-		if area > (totalVideoPixels*0.00010) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
+		if area > (totalVideoPixels*0.00007) and area < (totalVideoPixels*0.0022) and aspect_ratio <= 4 and aspect_ratio >= 0.25:
 			potential_centroids.append(z)
 			print "area: %s \taspect ration: %s" % (area, aspect_ratio)
 
@@ -172,8 +172,9 @@ def getBackgroundImage(vid,numFrames):
 
 # adds frame to the background image called old_background_image, returns updated image
 def addToBackgroundImage(frame,old_background_image):
-	cv2.accumulateWeighted(frame,old_background_image,0.001)
-	final = cv2.convertScaleAbs(update)
+	old_background_image = np.float32(old_background_image)
+	cv2.accumulateWeighted(frame,old_background_image,0.01)
+	final = cv2.convertScaleAbs(old_background_image)
 	return final
 
 
@@ -208,8 +209,8 @@ def find_tank_bounds(image,name_of_trial):
 
 		### 17 Nov 2015
 		# given what fernando's tank looks like and the fact the tank's position in the video screen shouldn't change a whole lot, I'm just going to hard-code these values. If you want to go back to have the tank bounds determined programatically, uncomment the line below:
-		#top_bound, left_bound, right_bound, lower_bound = 250, 200, 1100, 525
-		top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
+		lower_bound, left_bound, right_bound, top_bound = 250, 300, 1700, 800
+		#top_bound, left_bound, right_bound, lower_bound = box[1][1], box[1][0], box[3][0], box[3][1]
 
 		print "rectangle bounds: "
 		print top_bound, left_bound, right_bound, lower_bound
@@ -286,7 +287,7 @@ except:
 	cap = cv2.VideoCapture(path)
 	live = False
 	fps = round(cap.get(cv2.cv.CV_CAP_PROP_FPS),2)
-	print "looks like we're reading from a file"
+	print "looks like we're reading from a video file. the video was taken at %s frames per second" % fps
 
 cap = cv2.VideoCapture(path)
 global camWidth, camHeight # for masking
@@ -411,9 +412,12 @@ while(cap.isOpened()):
 
 	endOfLoop = time.time()
 
-	if counter%100 == 0:
-		pass
-		#hsv_initial = addToBackgroundImage(hsv,hsv_initial)
+	# every 25 frames, add the frame to the 'background' image so that's it's constantly updating
+	print hsv.shape
+	print hsv_initial.shape
+	if counter%25 == 24:
+		hsv_initial = addToBackgroundImage(hsv,hsv_initial)
+		print "added this frame to the background image"
 
 	print "time of loop: %s" % round(time.time()-beginningOfLoop,4)
 
