@@ -11,7 +11,11 @@ The goal now (4 Nov 2015) is to modify the script to meet fernado's needs for hi
 ### to do:
 ## I've noticed that when the fish is on top of the black thing in the middle of the tank, its difference image shows up as green
 ## so, in the future: when you can't find the fish, only look for green regions of the tank and see if you can find the fish then
-## also to do: in boundingRect, make it so that the rectangle does not have to be parrallel to the bottom of the screen
+
+## to speed things up: get imageio instead of cv2.VideoCapture to read in the frame (~2.5x faster)
+## figure out how to track two fish
+## figure out how to separate fish from the background
+## implement adaptive thresholding
 
 help menu:  python fernando_tracker.py --help
 arguments:
@@ -173,7 +177,7 @@ def getBackgroundImage(vid,numFrames):
 # adds frame to the background image called old_background_image, returns updated image
 def addToBackgroundImage(frame,old_background_image):
 	old_background_image = np.float32(old_background_image)
-	cv2.accumulateWeighted(frame,old_background_image,0.01)
+	cv2.accumulateWeighted(frame,old_background_image,0.1)
 	final = cv2.convertScaleAbs(old_background_image)
 	return final
 
@@ -418,6 +422,8 @@ while(cap.isOpened()):
 	if counter%25 == 24:
 		hsv_initial = addToBackgroundImage(hsv,hsv_initial)
 		print "added this frame to the background image"
+		# optionally, write the newbackground image
+		#cv2.imwrite("{}/{}_background.jpg".format(name, name), hsv_initial)
 
 	print "time of loop: %s" % round(time.time()-beginningOfLoop,4)
 
